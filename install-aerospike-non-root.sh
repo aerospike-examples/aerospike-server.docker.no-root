@@ -11,7 +11,7 @@
 #		Will download specified version of Aerospike and set up 'local' version under INSTALL_DIRECTORY (see below)
 #
 # Usage : 
-#	install-aerospike-non-root.sh -c <AEROSPIKE_CONFIG_PATH> -f <FEATURE_KEY_FILE> [ -d INSTALL_DIRECTORY] [ -v AEROSPIKE_VERSION ] [ -p DATA_PARTITION ] [ -o ]
+#	install-aerospike-non-root.sh -c <AEROSPIKE_CONFIG_PATH> -f <FEATURE_KEY_FILE> [ -d INSTALL_DIRECTORY] [ -v AEROSPIKE_VERSION ] [ -p DATA_PARTITION ] [ -o ] [ -u RUN_TIME_USER ] [ -g RUN_TIME_GROUP ]
 #
 #	AEROSPIKE_CONFIG_PATH - location of aerospike.conf to be used. Mandatory argument - no default.
 #	FEATURE_KEY_FILE - location of Aerospike Enterprise feature key file. Mandatory - no default.
@@ -33,7 +33,7 @@ source lib/util-functions.sh
 #-----------------
 # Static Variables
 #-----------------
-USAGE="$0 -c <AEROSPIKE_CONFIG_PATH> -f <FEATURE_KEY_FILE> [ -d INSTALL_DIRECTORY] [ -v AEROSPIKE_VERSION ] [ -p DATA_PARTITION ] [ -o ] [ -i DISTRIBUTION ]"
+USAGE="$0 -c <AEROSPIKE_CONFIG_PATH> -f <FEATURE_KEY_FILE> [ -d INSTALL_DIRECTORY] [ -v AEROSPIKE_VERSION ] [ -p DATA_PARTITION ] [ -o ] [ -i DISTRIBUTION ] [ -u RUN_TIME_USER ] [ -g RUN_TIME_GROUP ]"
 CURRENT_DIRECTORY=$(pwd)
 DEFAULT_LOCAL_AEROSPIKE_DIR=$(pwd)/${DEFAULT_INSTALL_SUB_DIRECTORY}
 DEFAULT_DISTRIBUTION=el6
@@ -42,6 +42,8 @@ TEMP_FILE_DIR=/tmp
 IS_COMMUNITY=0
 PERMITTED_DISTRIBUTIONS="$DEFAULT_DISTRIBUTION el7 el8 debian8 debian9 debian10 ubuntu14 ubuntu 16 ubuntu18"
 DISTRIBUTION=$DEFAULT_DISTRIBUTION
+DEFAULT_RUN_TIME_USER=root
+DEFAULT_RUN_TIME_GROUP=root
 
 #------------------
 # Utility Functions
@@ -108,7 +110,7 @@ done
 #-------------------------------
 # Process command line arguments
 #-------------------------------
-while getopts ":d:c:f:p:v:i:o" arg ; do
+while getopts ":d:c:f:p:v:i:g:u:o" arg ; do
 	case ${arg} in
 	    c)	AEROSPIKE_CONFIG=$OPTARG
 		;;	
@@ -123,6 +125,10 @@ while getopts ":d:c:f:p:v:i:o" arg ; do
 		p)	DATA_PARTITION=$OPTARG
 		;;
 		v)	AEROSPIKE_VERSION=$OPTARG
+		;;
+		u)	RUN_TIME_USER=$OPTARG
+		;;
+		g)	RUN_TIME_GROUP=$OPTARG
 		;;
 		:)	echo "Invalid option: $OPTARG requires an argument"
 			echo "Usage : $USAGE"
@@ -176,6 +182,7 @@ fi
 # Will check that the resulting path is writeable
 if [ ! -z $DATA_PARTITION ]
 then
+	safe_mkdir $DATA_PARTITION	
 	if [ -d $DATA_PARTITION ]
 	then
 		DATA_PARTITION=${DATA_PARTITION}/data.dat
@@ -210,6 +217,8 @@ fi
 # Make use of defaults where options not provided ( -d -v -p options )
 LOCAL_AEROSPIKE_DIR=${LOCAL_AEROSPIKE_DIR:=$DEFAULT_LOCAL_AEROSPIKE_DIR}
 AEROSPIKE_VERSION=${AEROSPIKE_VERSION:=latest}
+RUN_TIME_USER=${RUN_TIME_USER:=$DEFAULT_RUN_TIME_USER}
+RUN_TIME_GROUP=${RUN_TIME_GROUP:=$DEFAULT_RUN_TIME_GROUP}
 
 # Need to create install directory if we're using current working directory
 # If we have been given a local directory need to checjk it exists and is writeable
@@ -359,8 +368,8 @@ fi
 
 ASD_CONFIG_PATH=${LOCAL_AEROSPIKE_DIR}/etc/aerospike/aerospike.conf
 cp ${AEROSPIKE_CONFIG} $ASD_CONFIG_PATH
-sed -i "s/#ASD_USER#/$(whoami)/" $ASD_CONFIG_PATH
-sed -i "s/#ASD_GROUP#/$(id -gn)/" $ASD_CONFIG_PATH
+sed -i "s/#ASD_USER#/$RUN_TIME_USER/" $ASD_CONFIG_PATH
+sed -i "s/#ASD_GROUP#/$RUN_TIME_GROUP/" $ASD_CONFIG_PATH
 ESCAPED_DATA_PARTITION=$(echo $DATA_PARTITION | sed 's/\//\\\//g')
 ESCAPED_LOCAL_DIR=$(echo $LOCAL_AEROSPIKE_DIR | sed 's/\//\\\//g')
 sed -i "s/#DATA_FILE#/${ESCAPED_DATA_PARTITION}/" $ASD_CONFIG_PATH
