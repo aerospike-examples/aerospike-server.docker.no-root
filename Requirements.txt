@@ -1,2 +1,0 @@
-Community or Enterprise
-Run as root
