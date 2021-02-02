@@ -8,12 +8,14 @@ ARG RUN_TIME_GROUP=asd
 ARG DATA_DIR=${AEROSPIKE_RUN_DIR}/opt/aerospike/data
 ARG IS_ENTERPRISE=0
 ARG FEATURE_KEY_FILE=features.conf
+ARG AEROSPIKE_VERSION=latest
 
 # These parameters used at run time
 ENV AEROSPIKE_RUN_DIR $AEROSPIKE_RUN_DIR
 ENV RUN_TIME_USER $RUN_TIME_USER
 ENV ASD_CONFIG_PATH=${AEROSPIKE_RUN_DIR}/etc/aerospike/aerospike.conf
 ENV ASD_EXE=${AEROSPIKE_RUN_DIR}/usr/bin/asd
+ENV HOME=/aerospike
 
 # Copy over build assets
 COPY . $AEROSPIKE_BUILD_DIR/
@@ -31,7 +33,7 @@ mkdir $AEROSPIKE_RUN_DIR && \
 COMMUNITY_FLAG=$(bash -c "if [[ $IS_ENTERPRISE -eq 0 ]]; then echo '-o' ; else echo ''; fi") && \
 ENTERPRISE_FLAG=$(bash -c "if [[ $IS_ENTERPRISE -eq 0 ]]; then echo '' ; else echo '-f $FEATURE_KEY_FILE'; fi") && \
 cd $AEROSPIKE_BUILD_DIR && \
-$AEROSPIKE_BUILD_DIR/install-aerospike-non-root.sh -c aerospike.template.conf -d $AEROSPIKE_RUN_DIR $COMMUNITY_FLAG $ENTERPRISE_FLAG \
+$AEROSPIKE_BUILD_DIR/install-aerospike-non-root.sh -c aerospike.template.conf -d $AEROSPIKE_RUN_DIR -v $AEROSPIKE_VERSION $COMMUNITY_FLAG $ENTERPRISE_FLAG \
 -i debian9 -p $DATA_DIR -u $RUN_TIME_USER -g $RUN_TIME_GROUP && \
 # Permissions
 chown -R $RUN_TIME_USER:$RUN_TIME_GROUP $AEROSPIKE_RUN_DIR && \

@@ -1,5 +1,14 @@
 #!/bin/bash
 
+######################################################################################
+#
+# Check build executes correctly by running aql vs each of the built containers
+# This will fail if the build is incorrect
+# You will have to type 'exit' every time an aql command prompt is seen in order to complete the tests
+# Three times in total
+#
+######################################################################################
+
 NON_ROOT_COMMUNITY_CONTAINER_NAME=non-root-community
 NON_ROOT_ENTERPRISE_CONTAINER_NAME=non_root_enterprise
 

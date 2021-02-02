@@ -1,105 +1,141 @@
-# Aerospike non-root install and run
+# Aerospike Container - Root Free Build
 
-This archive allows you to install and run Aerospike without requiring the use of the root user or sudo.
+Docker files and images for standard builds of Aerospike have been available for some time
 
-## Quick Start
+* https://github.com/aerospike/aerospike-server.docker
+* https://github.com/aerospike/aerospike-server-enterprise.docker
+* [Aerospike@DockerHub](https://registry.hub.docker.com/_/aerospike)
 
-Take this archive and untar it to a convenient place using tar xf <ARCHIVE_NAME>. All the assets will be contained in *aerospike-non-root-install*
+These all build and run Aerospike using a standard installation. The standard installation allows Aerospike to configured to run under any user id, but the service needs to be started using the root user. See [configuration](https://www.aerospike.com/docs/operations/configure/non_root/) for details.
 
-You will need to supply an Aerospike Enterprise feature key to enable the software. Copy this key to *aerospike-non-root-install* as \<FEATURE_KEY_NAME\>
+There are however significant concerns around running containers under the root id, many of which are detailed [here](https://docs.docker.com/engine/security/). The OpenShift platform [prevents](https://www.openshift.com/blog/managing-sccs-in-openshift) this by default
 
-A basic configuration file, aerospike.template.conf, is supplied which will set up a local instance of Aerospike and a namespace 'bar'. Full details of configuration at [Aerospike configuration](https://www.aerospike.com/docs/operations/configure/index.html)
+With the above in mind, a container which runs under a non-privileged id is desirable. This repository provides build assets to support this.
 
-Install Aerospike under the local directory name aerospike_local (default).
+## Community / Enterprise
 
-```
-cd aerospike-non-root-install
-./install-aerospike-non-root.sh -f <FEATURE_KEY_NAME> -c aerospike.template.conf 
-```
+Two editions of Aerospike are available - Community and Enterprise. The former is open source and can be [downloaded](https://www.aerospike.com/lp/aerospike-community-edition/) without charge. It has some scale limitations. The latter contains features not available in Community, removes the scale limits and is supported 24 x 7 by our Global Support team. See our [product matrix](https://www.aerospike.com/products/product-matrix/) for details. Enterprise Aerospike requires a valid feature key before it will run.
 
-Start Aerospike
+As such, two different build mechanisms here, one for Community, one for Enterprise.
 
-```
-aerospike_local/usr/bin/run-asd-non-root.sh start
-```
+### Community Aerospike build
 
-Insert a record and retrieve it
+To build a community container, run the command below from the directory containing your ```Dockerfile```. The 't' flag allows you to name your image.
 
-```
-aerospike_local/usr/bin/aql
-
-aql> insert into bar(PK,value) values(1,1)
-OK, 1 record affected.
-
-aql> select * from bar where PK=1
-+-------+
-| value |
-+-------+
-| 1     |
-+-------+
-1 row in set (0.001 secs)
-
-OK
-
-aql>exit
+```bash
+docker build -t $COMMUNITY_IMAGE_NAME .
 ```
 
-Stop Aerospike
+To run your image, giving your container a specific name
 
-```
-aerospike_local/usr/bin/run-asd-non-root.sh stop
-```
-
-If you don't have a feature key, you can install Aerospike Community by using the -o flag with the installer
-
-```
-./install-aerospike-non-root.sh -o -c aerospike.template.conf 
+```bash
+docker run -d --name $CONTAINER_NAME $COMMUNITY_IMAGE_NAME
 ```
 
-## Usage
+You can directly access your running container using aql
 
-As before, unpack the supplied archive.
-
-The install runs with the following options
-
-```
-Usage : install-aerospike-non-root.sh -c <AEROSPIKE_CONFIG_PATH> -f <FEATURE_KEY_FILE> [ -d INSTALL_DIRECTORY] [ -v AEROSPIKE_VERSION ] [ -p DATA_PARTITION ] [-o] [ -i DISTRIBUTION ]
+```bash
+docker exec -it $CONTAINER_NAME usr/bin/aql
 ```
 
-**AEROSPIKE_CONFIG_PATH** - path to the Aerospike configuration file to be used when installing Aerospike (aerospike.conf)  
-**FEATURE_KEY_FILE** - Enterprise feature key file allowing operation of Enterprise Aerospike  
-**INSTALL_DIRECTORY** - Directory you would like Aerospike installed to. Will default to aerospike_local in the local directory  
-**AEROSPIKE_VERSION** - Version of Aerospike you would like to install e.g. 4.8.0.5. See [releases](https://www.aerospike.com/enterprise/download/server/notes.html) for full list. Defaults to keyword 'latest' which will install the latest release.  
-**DATA_PARTITION** - Directory or file to be used for the *DATA_PARTITION* token - see below  
-**DISTRIBUTION** - Distribution to be used - must be one of el6/el7/el8/debian8/debian9/debian10/ubuntu14/ubuntu16/ubuntu18. Defaults to el6
-**-o** - Install Community rather than Enterprise Aerospike. *FEATURE_KEY_FILE* is not required when using this flag  
+Stop and remove your container 
 
-If using the *INSTALL_DIRECTORY* option you should start Aerospike using
-
-```
-INSTALL_DIRECTORY/usr/bin/run-asd-non-root.sh start
+```bash
+docker container stop $CONTAINER_NAME
+docker container rm $CONTAINER_NAME
 ```
 
-All utilities should be similarly prefixed e.g.
+### Enterprise Aerospike build
+
+As noted above, Enterprise Aerospike requires a feature key. It is also build using a different binary. To build a non-root Enterprise Aerospike container the IS_ENTERPRISE flag needs to be set. By default the build process will expect the license key file to be named ```features.conf``` and placed in the same directory as the ```Dockerfile```. The container is then built as follows
+
+```bash
+docker build -t $ENTERPRISE_IMAGE_NAME --build-arg IS_ENTERPRISE=1 .
+```
+
+To run your image
+
+```bash
+docker run -d --name $CONTAINER_NAME $ENTERPRISE_IMAGE_NAME
+```
+
+The aql and container removal commands are the same as before.
+
+License key location can be provided to the build process using the ```FEATURE_KEY_FILE``` argument, should the default requirement not be satisfied. Note this path must be relative to the build directory and cannot traverse upwards using the ```..``` operator.
+
+```bash
+docker build -t $ENTERPRISE_IMAGE_NAME --build-arg IS_ENTERPRISE=1 --build-arg FEATURE_KEY_FILE=mylicense.conf .
+```
+
+## Registering your image
+
+You can register your image in a container registry. This decouples image build from image deployment.
+
+By default Docker will use the [DockerHub](https://hub.docker.com/) registry. Assuming you have set up an account and [logged in](https://docs.docker.com/engine/reference/commandline/login/) you can push your image. Let's say I have been naming my image aerospike:non-root-community. ktune is my account name on Docker Hub, so first I tag it with my account name so I can then push it.
+
+```bash
+docker tag aerospike:non-root-community ktune/aerospike:non-root-community
+docker push ktune/aerospike:non-root-community 
+```
+
+This will push it to the ```aerospike``` repository within my account. Obviously, use your own account name!
+
+***Be very careful if/when pushing public images***. Firstly make sure you haven't inadverently included content you don't wish to make public. Secondly, you ***should not*** make Enterprise images public as they ***will contain your license file***. More on the ```docker push``` command [here](https://docs.docker.com/engine/reference/commandline/push/) - particularly useful if wanting to push to a private registry.
+
+## Aerospike Version
+
+By default the container will build using the latest version of Aerospike in both Community and Aerospike modes. A specific Aerospike version can be selected using the AEROSPIKE_VERSION build argument e.g.
+
+```bash
+docker build -t $COMMUNITY_IMAGE_NAME --build-arg AEROSPIKE_VERSION=5.3.0.3 .
+```
+
+You can find out what version of Aerospike a container is running using
+
+```bash
+docker exec -it $CONTAINER_NAME usr/bin/asinfo -v 'build' 
+```
+
+## Deploying vs Openshift
+
+There are a number of ways of setting up an Openshift cluster - [this](https://www.openshift.com/try) is a good page to get you started.
+
+Once you have your cluster set up, you can use the ```oc``` tool to administer it. Here's a useful [getting started](https://docs.openshift.com/container-platform/4.2/cli_reference/openshift_cli/getting-started-cli.html) to help you with installation of oc and basic orientation.
+
+I used IBM cloud FWIW. You can set up an Openshift cluster very easily - they then give you a command that looks like
+
+```bash
+oc login --token=XXXXXXXXXX --server=https://XXXXX.containers.cloud.ibm.com:PORT_NO
+```
+
+From there, you can reference an image in a container registry and deploy that. e.g.
+
+```bash
+oc new-app ktune/aerospike:non-root --name aerospike
+```
+
+By way of demonstrating it's all working, we can get the name of the container
+
+```bash
+$ oc get pods
+NAME                 READY   STATUS      RESTARTS   AGE
+aerospike-1-6x7b2    1/1     Running     0          73s
+aerospike-1-deploy   0/1     Completed   0          77s
+```
+
+And log in
 
 ```
-INSTALL_DIRECTORY/usr/bin/aql
+$ oc exec -it aerospike-1-6x7b2 usr/bin/aql
+...
+Aerospike Query Client
+Version 4.0.4
+C Client Version 4.6.17
+Copyright 2012-2020 Aerospike. All rights reserved.
+aql> 
+
 ```
 
-## Configuration Template
+## Testing
 
-A number of special tokens are recognized in the configuration file - this is specific to this install rather than being true of Aerospike in general. These tokens will be replaced as follows
-
-**#ASD_USER#** - replaced by the current user id  
-**#ASD_GROUP#** - replaced by the current group id  
-**#LOCAL_AEROSPIKE_DIR#** - replaced by the value of *INSTALL_DIRECTORY*  
-**#FD_LIMIT#** - replaced with the current value of ulimit -n (open file descriptor limit). This is used to work around the fact that non-privileged users often have low limits for this value. A standard required value for Aerospike is 15000 (set as [proto-fd-max](https://www.aerospike.com/docs/reference/configuration/#proto-fd-max)). You will see a warning if the upper limit is lower than our recommended value.  
-**#DATA_FILE#** - replaced by the value of *DATA_PARTITION* above. This is used to set up a basic filesystem based namespace in the quick start.
-
-There is no real need to make use of these tokens in a custom *aerospike.conf* - they are used here to support quick setup.
-
-## Dependencies
-
-* rpm
-* cpio
-* Standard utilities - which,diff,getopts
+```test-non-root-container-build.sh``` within the test directory can be used to test the success of the container build. The contents should be self evident.
