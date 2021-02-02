@@ -96,6 +96,10 @@ You can find out what version of Aerospike a container is running using
 docker exec -it $CONTAINER_NAME usr/bin/asinfo -v 'build' 
 ```
 
+## Aerospike Configuration
+
+The build process uses ```aerospike.template.conf``` to create the Aerospike configuration file. To customise configuration edit this file. Do not remove the tokens  - which look like #.*# e.g. #ASD_USER# as these are needed by the build process.
+
 ## Deploying vs Openshift
 
 There are a number of ways of setting up an Openshift cluster - [this](https://www.openshift.com/try) is a good page to get you started.
