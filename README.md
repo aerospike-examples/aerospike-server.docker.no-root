@@ -125,7 +125,7 @@ aerospike-1-deploy   0/1     Completed   0          77s
 
 And log in
 
-```
+```bash
 $ oc exec -it aerospike-1-6x7b2 usr/bin/aql
 ...
 Aerospike Query Client
@@ -135,6 +135,10 @@ Copyright 2012-2020 Aerospike. All rights reserved.
 aql> 
 
 ```
+
+## Use under Kubernetes
+
+This container build has not been validated for use under Kubernetes yet.
 
 ## Testing
 
