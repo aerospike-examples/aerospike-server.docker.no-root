@@ -2,8 +2,8 @@
 
 Docker files and images for standard builds of Aerospike have been available for some time
 
-* https://github.com/aerospike/aerospike-server.docker
-* https://github.com/aerospike/aerospike-server-enterprise.docker
+* [https://github.com/aerospike/aerospike-server.docker](https://github.com/aerospike/aerospike-server.docker)
+* [https://github.com/aerospike/aerospike-server-enterprise.docker](https://github.com/aerospike/aerospike-server-enterprise.docker)
 * [Aerospike@DockerHub](https://registry.hub.docker.com/_/aerospike)
 
 These all build and run Aerospike using a standard installation. The standard installation allows Aerospike to configured to run under any user id, but the service needs to be started using the root user. See [configuration](https://www.aerospike.com/docs/operations/configure/non_root/) for details.
